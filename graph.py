@@ -24,7 +24,6 @@ class Graph:
         self.goal_hub: Optional[str] = None
         self.drone_count: int = 0
         self.simulator_instance: Optional[Any] = None
-        self.graph
 
     def load_from_parser(self, parser: MapParser) -> None:
         """Hydrates graph state from parser."""
@@ -97,7 +96,8 @@ class Graph:
             if reservation_table:
                 next_turn_wait = current.turn + 1
                 if not reservation_table.is_hub_reserved(
-                    self.hubs[current.hub], next_turn_wait
+                    self.hubs[current.hub], next_turn_wait,
+                    self.start_hub, self.goal_hub
                 ):
                     wait_state = State(
                         hub=current.hub,
@@ -109,15 +109,23 @@ class Graph:
 
             neighbors = self.get_neighbors(current.hub)
             for neighbor, move_cost, conn in neighbors:
-                new_turn = current.turn + 1
+                new_turn = current.turn + move_cost
+                hub_obj = self.hubs[neighbor]
 
                 if reservation_table:
-                    if reservation_table.is_hub_reserved(
-                        self.hubs[neighbor], new_turn
-                    ):
-                        continue
                     if reservation_table.is_conn_reserved(conn, current.turn):
                         continue
+                    if hub_obj.type_zone == "restricted":
+                        inter_turn = current.turn + 1
+                        if reservation_table.is_conn_reserved(conn, inter_turn):
+                            continue
+
+                    if reservation_table.is_hub_reserved(
+                        hub_obj, new_turn,
+                        self.start_hub, self.goal_hub
+                    ):
+                        continue
+
 
                 new_state = State(
                     hub=neighbor,
