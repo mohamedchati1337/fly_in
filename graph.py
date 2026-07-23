@@ -126,6 +126,8 @@ class Graph:
                     ):
                         continue
 
+                if neighbor in current.path:
+                    continue
 
                 new_state = State(
                     hub=neighbor,

@@ -14,6 +14,9 @@ class Simulator:
         self.reservation = ReservationTable()
         self.turn = 0
         self.drones = self.create_drones()
+        self.visualizer = visualizer
+        self.visualizer.drones_list = self.drones
+        self.visualizer.simulator = self
 
     def create_drones(self) -> List[Drone]:
             """Calculates collision-free optimal flight paths.
@@ -102,6 +105,18 @@ class Simulator:
                     d.pos += 1
                 elif nxt:
                     hub = self.graph.hubs[nxt]
+                    occupied = 0
+                    for other in self.drones:
+                        if (
+                            not other.in_flight
+                            and other.current_hub_name() == nxt
+                        ):
+                            occupied += 1
+
+                    # If the hub is full, wait
+                    if occupied >= hub.max_drones:
+                        continue
+
                     is_res = hub.type_zone == "restricted"
                     d.move(is_res)
                     d.finish_flight()

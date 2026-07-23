@@ -2,6 +2,9 @@ import math
 import sys
 from typing import Any, List
 import pygame
+from parser import MapParser
+from graph import Graph
+from sim import Simulator
 
 
 class Visualizer:
@@ -60,6 +63,11 @@ class Visualizer:
             18
         )
 
+        self.cap_font = pygame.font.SysFont(
+            "",
+            16
+        )
+
         self.drones_list: List[Any] = []
         self.simulator: Any = None
         self.clock = pygame.time.Clock()
@@ -86,6 +94,12 @@ class Visualizer:
 
         return int(x), int(y)
 
+    def get_hub_max_cap(self, hub: Any) -> str:
+        """Extracts and formats max_drones attribute from Hub instance."""
+        if hasattr(hub, 'max_drones') and hub.max_drones is not None:
+            return str(hub.max_drones)
+        return "inf"
+
     def update(self) -> None:
         """Processes events and updates frames."""
         mouse_x, mouse_y = (
@@ -107,7 +121,9 @@ class Visualizer:
                     ):
                         self.graph.simulator_instance.step_turn()
                     elif self.simulator:
-                        self.simulator.step_turn()
+                        moves = self.simulator.step_turn()
+                        if moves:
+                            print(" ".join(moves))
 
         self.screen.fill(
             (60, 60, 60)
@@ -132,7 +148,7 @@ class Visualizer:
             middle_y = (y1 + y2) // 2
 
             text = self.conn_font.render(
-                str(conn.name_of_connection()),
+                str(conn.name()),
                 True,
                 (255, 255, 255)
             )
@@ -170,6 +186,21 @@ class Visualizer:
                 25,
                 2
             )
+
+            # Get capacity directly from hub.max_drones
+            max_cap_str = self.get_hub_max_cap(hub)
+
+            cap_text = self.cap_font.render(
+                f"c:{max_cap_str}",
+                True,
+                (255, 255, 255) if color == (0, 0, 0) else (0, 0, 0)
+            )
+
+            cap_rect = cap_text.get_rect(
+                center=(screen_x, screen_y)
+            )
+
+            self.screen.blit(cap_text, cap_rect)
 
             if (
                 (mouse_x - screen_x) ** 2
@@ -214,8 +245,9 @@ class Visualizer:
         position_counts: dict[tuple[int, int], int] = {}
 
         for drone in self.drones_list:
-            current_hub = drone.current_hub()
-            next_hub = drone.next_hub()
+            current_hub = self.graph.hubs[drone.current_hub_name()]
+            next_name = drone.next_hub_name()
+            next_hub = self.graph.hubs[next_name] if next_name else None
 
             if (
                 drone.in_flight
@@ -279,3 +311,29 @@ class Visualizer:
                 drone_id_text,
                 drone_id_rect
             )
+
+
+if __name__ == "__main__":
+    """Executes main application startup sequence."""
+    if len(sys.argv) < 2:
+        print("Usage: python3 visualizer.py <map_file>")
+        sys.exit(1)
+
+    map_file = sys.argv[1]
+
+    parser = MapParser()
+    parser.parse_file(map_file)
+
+    graph = Graph()
+    graph.load_from_parser(parser)
+
+    visualizer = Visualizer(graph)
+
+    simulator = Simulator(graph, visualizer)
+
+    visualizer.simulator = simulator
+    if hasattr(simulator, "drones"):
+        visualizer.drones_list = simulator.drones
+
+    while True:
+        visualizer.update()
