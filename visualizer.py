@@ -10,13 +10,17 @@ from sim import Simulator
 class Visualizer:
     """Provides graphical simulation interface tracking drones."""
 
-    def __init__(self, graph: Any) -> None:
+    def __init__(self, graph: Any, simulator: Any = None) -> None:
         """Initializes system visualizer component frameworks."""
         pygame.init()
 
         self.graph: Any = graph
+        self.simulator: Any = simulator
         self.offset_x: int = 0
         self.offset_y: int = 0
+
+        # Counter for drone clicks/turns
+        self.click_count: int = 0
 
         info = pygame.display.Info()
 
@@ -68,8 +72,12 @@ class Visualizer:
             16
         )
 
+        self.counter_font = pygame.font.SysFont(
+            "",
+            36
+        )
+
         self.drones_list: List[Any] = []
-        self.simulator: Any = None
         self.clock = pygame.time.Clock()
 
         pygame.display.set_caption(
@@ -98,7 +106,7 @@ class Visualizer:
         """Extracts and formats max_drones attribute from Hub instance."""
         if hasattr(hub, 'max_drones') and hub.max_drones is not None:
             return str(hub.max_drones)
-        return "inf"
+        return "1"
 
     def update(self) -> None:
         """Processes events and updates frames."""
@@ -115,6 +123,13 @@ class Visualizer:
 
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_RIGHT, pygame.K_SPACE):
+                    # Ignore click if simulation is finished
+                    if self.simulator and self.simulator.all_finished():
+                        continue
+
+                    # Increment click count
+                    self.click_count += 1
+
                     if (
                         hasattr(self.graph, 'simulator_instance')
                         and self.graph.simulator_instance
@@ -187,7 +202,6 @@ class Visualizer:
                 2
             )
 
-            # Get capacity directly from hub.max_drones
             max_cap_str = self.get_hub_max_cap(hub)
 
             cap_text = self.cap_font.render(
@@ -211,6 +225,14 @@ class Visualizer:
 
         self.draw_drones()
 
+        # Render Turns / Clicks Counter
+        counter_surface = self.counter_font.render(
+            f"Turns / Clicks: {self.click_count}",
+            True,
+            (255, 215, 0)
+        )
+        self.screen.blit(counter_surface, (20, 20))
+
         if hovered_hub:
             text = self.font.render(
                 hovered_hub.name,
@@ -229,13 +251,13 @@ class Visualizer:
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_d]:
-            self.offset_x += 5
+            self.offset_x += 10
         if keys[pygame.K_a]:
-            self.offset_x -= 5
+            self.offset_x -= 10
         if keys[pygame.K_w]:
-            self.offset_y -= 5
+            self.offset_y -= 10
         if keys[pygame.K_s]:
-            self.offset_y += 5
+            self.offset_y += 10
 
         pygame.display.flip()
         self.clock.tick(60)
@@ -335,5 +357,9 @@ if __name__ == "__main__":
     if hasattr(simulator, "drones"):
         visualizer.drones_list = simulator.drones
 
-    while True:
-        visualizer.update()
+    try:
+        while True:
+            visualizer.update()
+    except (KeyboardInterrupt, SystemExit):
+        print("\nSimulation terminated cleanly.")
+        sys.exit(0)
