@@ -1,6 +1,6 @@
 import math
 import sys
-from typing import Any, List
+from typing import Any, List, Tuple
 import pygame
 from parser import MapParser
 from graph import Graph
@@ -19,7 +19,6 @@ class Visualizer:
         self.offset_x: int = 0
         self.offset_y: int = 0
 
-        # Counter for drone clicks/turns
         self.click_count: int = 0
 
         info = pygame.display.Info()
@@ -57,34 +56,17 @@ class Visualizer:
             "crimson": (220, 20, 60),
         }
 
-        self.font = pygame.font.SysFont(
-            "",
-            30
-        )
-
-        self.conn_font = pygame.font.SysFont(
-            "",
-            18
-        )
-
-        self.cap_font = pygame.font.SysFont(
-            "",
-            16
-        )
-
-        self.counter_font = pygame.font.SysFont(
-            "",
-            36
-        )
+        self.font = pygame.font.SysFont("", 30)
+        self.conn_font = pygame.font.SysFont("", 18)
+        self.cap_font = pygame.font.SysFont("", 16)
+        self.counter_font = pygame.font.SysFont("", 36)
 
         self.drones_list: List[Any] = []
         self.clock = pygame.time.Clock()
 
-        pygame.display.set_caption(
-            "Fly In"
-        )
+        pygame.display.set_caption("Fly In")
 
-    def hub_screen_position(self, hub: Any) -> tuple[int, int]:
+    def hub_screen_position(self, hub: Any) -> Tuple[int, int]:
         """Calculates dynamic viewport matrix translations."""
         x = (
             hub.coordinates[0]
@@ -110,10 +92,7 @@ class Visualizer:
 
     def update(self) -> None:
         """Processes events and updates frames."""
-        mouse_x, mouse_y = (
-            pygame.mouse.get_pos()
-        )
-
+        mouse_x, mouse_y = pygame.mouse.get_pos()
         hovered_hub = None
 
         for event in pygame.event.get():
@@ -123,11 +102,9 @@ class Visualizer:
 
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_RIGHT, pygame.K_SPACE):
-                    # Ignore click if simulation is finished
                     if self.simulator and self.simulator.all_finished():
                         continue
 
-                    # Increment click count
                     self.click_count += 1
 
                     if (
@@ -140,9 +117,7 @@ class Visualizer:
                         if moves:
                             print(" ".join(moves))
 
-        self.screen.fill(
-            (60, 60, 60)
-        )
+        self.screen.fill((60, 60, 60))
 
         for conn in self.graph.connections_list:
             hub_u = self.graph.hubs[conn.hub_u]
@@ -169,23 +144,14 @@ class Visualizer:
             )
 
             text_rect = text.get_rect(
-                center=(
-                    middle_x,
-                    middle_y - 15
-                )
+                center=(middle_x, middle_y - 15)
             )
 
             self.screen.blit(text, text_rect)
 
         for hub in self.graph.hubs.values():
-            screen_x, screen_y = (
-                self.hub_screen_position(hub)
-            )
-
-            color = self.colors.get(
-                hub.color,
-                (255, 255, 255)
-            )
+            screen_x, screen_y = self.hub_screen_position(hub)
+            color = self.colors.get(hub.color, (255, 255, 255))
 
             pygame.draw.circle(
                 self.screen,
@@ -203,11 +169,14 @@ class Visualizer:
             )
 
             max_cap_str = self.get_hub_max_cap(hub)
+            cap_color = (
+                (255, 255, 255) if color == (0, 0, 0) else (0, 0, 0)
+            )
 
             cap_text = self.cap_font.render(
                 f"c:{max_cap_str}",
                 True,
-                (255, 255, 255) if color == (0, 0, 0) else (0, 0, 0)
+                cap_color
             )
 
             cap_rect = cap_text.get_rect(
@@ -218,14 +187,12 @@ class Visualizer:
 
             if (
                 (mouse_x - screen_x) ** 2
-                +
-                (mouse_y - screen_y) ** 2
+                + (mouse_y - screen_y) ** 2
             ) <= 25 ** 2:
                 hovered_hub = hub
 
         self.draw_drones()
 
-        # Render Turns / Clicks Counter
         counter_surface = self.counter_font.render(
             f"Turns / Clicks: {self.click_count}",
             True,
@@ -239,14 +206,7 @@ class Visualizer:
                 True,
                 (255, 255, 255)
             )
-
-            self.screen.blit(
-                text,
-                (
-                    mouse_x + 10,
-                    mouse_y - 30
-                )
-            )
+            self.screen.blit(text, (mouse_x + 10, mouse_y - 30))
 
         keys = pygame.key.get_pressed()
 
@@ -264,7 +224,7 @@ class Visualizer:
 
     def draw_drones(self) -> None:
         """Renders simulation active drones overlay."""
-        position_counts: dict[tuple[int, int], int] = {}
+        position_counts: dict[Tuple[int, int], int] = {}
 
         for drone in self.drones_list:
             current_hub = self.graph.hubs[drone.current_hub_name()]
@@ -301,8 +261,12 @@ class Visualizer:
                 drone_y = base_y
             else:
                 angle = drone_index * (2 * math.pi / 5)
-                drone_x = base_x + int(offset_multiplier * math.cos(angle))
-                drone_y = base_y + int(offset_multiplier * math.sin(angle))
+                drone_x = base_x + int(
+                    offset_multiplier * math.cos(angle)
+                )
+                drone_y = base_y + int(
+                    offset_multiplier * math.sin(angle)
+                )
 
             pygame.draw.circle(
                 self.screen,
@@ -336,27 +300,19 @@ class Visualizer:
 
 
 if __name__ == "__main__":
-    """Executes main application startup sequence."""
     if len(sys.argv) < 2:
         print("Usage: python3 visualizer.py <map_file>")
         sys.exit(1)
-
     map_file = sys.argv[1]
-
     parser = MapParser()
     parser.parse_file(map_file)
-
     graph = Graph()
     graph.load_from_parser(parser)
-
-    visualizer = Visualizer(graph)
-
+    visualizer: Visualizer = Visualizer(graph)
     simulator = Simulator(graph, visualizer)
-
     visualizer.simulator = simulator
     if hasattr(simulator, "drones"):
         visualizer.drones_list = simulator.drones
-
     try:
         while True:
             visualizer.update()

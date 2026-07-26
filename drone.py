@@ -36,7 +36,10 @@ class Drone:
         self.turns_left = 2 if is_restricted else 1
 
     def finish_flight(self) -> bool:
-        """Decrements flight time remaining and advances position when arrived."""
+        """
+        Decrements flight time remaining and
+        advances position when arrived.
+        """
         if self.turns_left > 0:
             self.turns_left -= 1
             if self.turns_left == 0:

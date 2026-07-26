@@ -1,5 +1,5 @@
-from typing import Any, List
 import sys
+from typing import Any, List
 from drone import Drone
 from graph import Graph
 from reservation_table import ReservationTable
@@ -19,62 +19,69 @@ class Simulator:
         self.visualizer.simulator = self
 
     def create_drones(self) -> List[Drone]:
-            """Calculates collision-free optimal flight paths.
+        """Calculates collision-free optimal flight paths.
 
-            Returns:
-                List[Drone]: A list of scheduled Drone objects.
-            """
-            drones: List[Drone] = []
-            start = self.graph.start_hub
-            goal = self.graph.goal_hub
+        Returns:
+            List[Drone]: A list of scheduled Drone objects.
+        """
+        drones: List[Drone] = []
+        start = self.graph.start_hub
+        goal = self.graph.goal_hub
 
-            if not start or not goal:
-                print("Error: Start or Goal hub is not defined in the graph.")
+        if not start or not goal:
+            print("Error: Start or Goal hub is not defined in the graph.")
+            sys.exit(1)
+
+        for i in range(self.graph.drone_count):
+            path = self.graph.dijkstra(
+                start,
+                goal,
+                self.reservation
+            )
+
+            if not path:
+                if i == 0:
+                    print("Error: No static path exists between zones.")
+                else:
+                    print(
+                        f"Drone {i + 1} blocked at Hub: {start} "
+                        "after 0 turns."
+                    )
                 sys.exit(1)
 
-            for i in range(self.graph.drone_count):
-                path = self.graph.dijkstra(
-                    start,
-                    goal,
-                    self.reservation
-                )
+            t_idx = 0
+            for idx, name in enumerate(path):
+                if idx > 0:
+                    hub = self.graph.hubs[name]
+                    prev = path[idx - 1]
 
-                if not path:
-                    if i == 0:
-                        print("Error: No static path exists between zones.")
-                    else:
-                        print(f"Drone {i + 1} blocked at Hub: {start} after 0 turns.")
-                    sys.exit(1)
-
-                t_idx = 0
-                for idx, name in enumerate(path):
-                    if idx > 0:
-                        hub = self.graph.hubs[name]
-                        prev = path[idx - 1]
-
-                        if prev == name:
-                            t_idx += 1
-                            if name != start and name != goal:
-                                self.reservation.reserve_hub(hub, t_idx)
-                            continue
-
-                        edge = self.graph.find_connection(prev, name)
-                        cost = 2 if hub.type_zone == "restricted" else 1
-
-                        if edge:
-                            self.reservation.reserve_connection(edge.name(), t_idx)
-                            if cost == 2:
-                                self.reservation.reserve_connection(edge.name(), t_idx + 1)
-
-                        t_idx += cost
-
+                    if prev == name:
+                        t_idx += 1
                         if name != start and name != goal:
                             self.reservation.reserve_hub(hub, t_idx)
+                        continue
 
-                drone = Drone(drone_id=i + 1, path=path)
-                drones.append(drone)
+                    edge = self.graph.find_connection(prev, name)
+                    cost = 2 if hub.type_zone == "restricted" else 1
 
-            return drones
+                    if edge:
+                        self.reservation.reserve_connection(
+                            edge.name(), t_idx
+                        )
+                        if cost == 2:
+                            self.reservation.reserve_connection(
+                                edge.name(), t_idx + 1
+                            )
+
+                    t_idx += cost
+
+                    if name != start and name != goal:
+                        self.reservation.reserve_hub(hub, t_idx)
+
+            drone = Drone(drone_id=i + 1, path=path)
+            drones.append(drone)
+
+        return drones
 
     def all_finished(self) -> bool:
         """Checks if simulation completed entirely."""
@@ -113,7 +120,6 @@ class Simulator:
                         ):
                             occupied += 1
 
-                    # If the hub is full, wait
                     if occupied >= hub.max_drones:
                         continue
 

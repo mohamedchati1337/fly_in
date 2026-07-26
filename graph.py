@@ -1,13 +1,10 @@
-from __future__ import annotations
 import heapq
-from typing import Dict, List, Tuple, Optional, TYPE_CHECKING, Any
+from typing import Any, Dict, List, Optional, Tuple
 from hub import Hub
 from connection import Connection
 from state import State
-
-if TYPE_CHECKING:
-    from parser import MapParser
-    from reservation_table import ReservationTable
+from parser import MapParser
+from reservation_table import ReservationTable
 
 
 class Graph:
@@ -35,7 +32,11 @@ class Graph:
         self.hubs_list = list(self.hubs.values())
         self.connections_list = list(self.connections.values())
 
-    def find_connection(self, hub_u: str, hub_v: str) -> Optional[Connection]:
+    def find_connection(
+        self,
+        hub_u: str,
+        hub_v: str
+    ) -> Optional[Connection]:
         """Finds connection between two hubs."""
         key = (hub_u, hub_v) if hub_u < hub_v else (hub_v, hub_u)
         return self.connections.get(key)
@@ -49,7 +50,9 @@ class Graph:
             if current_hub != conn.hub_u and current_hub != conn.hub_v:
                 continue
 
-            neighbor = conn.hub_v if conn.hub_u == current_hub else conn.hub_u
+            neighbor = (
+                conn.hub_v if conn.hub_u == current_hub else conn.hub_u
+            )
             dest_hub = self.hubs[neighbor]
             move_cost = 2 if dest_hub.type_zone == "restricted" else 1
 
@@ -72,6 +75,9 @@ class Graph:
         reservation_table: Optional[ReservationTable] = None,
     ) -> Optional[List[str]]:
         """Executes space-time path planning sequence."""
+        if not self.start_hub or not self.goal_hub:
+            return None
+
         queue: List[State] = []
 
         start_state = State(
@@ -90,14 +96,20 @@ class Graph:
                 return current.path
 
             state_key = (current.hub, current.turn)
-            if state_key in best_cost and best_cost[state_key] <= current.cost:
+            if (
+                state_key in best_cost
+                and best_cost[state_key] <= current.cost
+            ):
                 continue
             best_cost[state_key] = current.cost
+
             if reservation_table:
                 next_turn_wait = current.turn + 1
                 if not reservation_table.is_hub_reserved(
-                    self.hubs[current.hub], next_turn_wait,
-                    self.start_hub, self.goal_hub
+                    self.hubs[current.hub],
+                    next_turn_wait,
+                    self.start_hub,
+                    self.goal_hub
                 ):
                     wait_state = State(
                         hub=current.hub,
@@ -113,16 +125,24 @@ class Graph:
                 hub_obj = self.hubs[neighbor]
 
                 if reservation_table:
-                    if reservation_table.is_conn_reserved(conn, current.turn):
+                    if reservation_table.is_conn_reserved(
+                        conn,
+                        current.turn
+                    ):
                         continue
                     if hub_obj.type_zone == "restricted":
                         inter_turn = current.turn + 1
-                        if reservation_table.is_conn_reserved(conn, inter_turn):
+                        if reservation_table.is_conn_reserved(
+                            conn,
+                            inter_turn
+                        ):
                             continue
 
                     if reservation_table.is_hub_reserved(
-                        hub_obj, new_turn,
-                        self.start_hub, self.goal_hub
+                        hub_obj,
+                        new_turn,
+                        self.start_hub,
+                        self.goal_hub
                     ):
                         continue
 
