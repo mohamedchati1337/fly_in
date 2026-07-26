@@ -1,6 +1,7 @@
 PYTHON   = python3
-APP      = app.py
-SRC      = sim.py visualizer.py graph.py drone.py parser.py connection.py hub.py reservation_table.py
+APP      = main.py
+MAP     ?= maps/easy/01_linear_path.txt
+SRC      = sim.py visualizer.py graph.py drone.py parser.py connection.py hub.py reservation_table.py main.py
 
 .PHONY: all install run lint clean
 
@@ -10,7 +11,7 @@ install:
 	pip3 install pygame mypy flake8
 
 run:
-	$(PYTHON) $(APP)
+	$(PYTHON) $(APP) $(MAP)
 
 lint:
 	@mypy --strict $(SRC)

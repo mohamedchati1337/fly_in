@@ -2,9 +2,6 @@ import math
 import sys
 from typing import Any, List, Tuple
 import pygame
-from parser import MapParser
-from graph import Graph
-from sim import Simulator
 
 
 class Visualizer:
@@ -297,25 +294,3 @@ class Visualizer:
                 drone_id_text,
                 drone_id_rect
             )
-
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 visualizer.py <map_file>")
-        sys.exit(1)
-    map_file = sys.argv[1]
-    parser = MapParser()
-    parser.parse_file(map_file)
-    graph = Graph()
-    graph.load_from_parser(parser)
-    visualizer: Visualizer = Visualizer(graph)
-    simulator = Simulator(graph, visualizer)
-    visualizer.simulator = simulator
-    if hasattr(simulator, "drones"):
-        visualizer.drones_list = simulator.drones
-    try:
-        while True:
-            visualizer.update()
-    except (KeyboardInterrupt, SystemExit):
-        print("\nSimulation terminated cleanly.")
-        sys.exit(0)
